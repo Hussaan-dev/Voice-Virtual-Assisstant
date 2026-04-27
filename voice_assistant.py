@@ -1,8 +1,8 @@
 import os
 import sys
+import threading
 from dotenv import load_dotenv
 
-#to load API's
 load_dotenv()
 
 API_KEY = os.getenv("API_KEY")
@@ -13,10 +13,9 @@ from elevenlabs.conversational_ai.conversation import Conversation
 from elevenlabs.conversational_ai.default_audio_interface import DefaultAudioInterface
 from elevenlabs.types import ConversationConfig
 
-#context for the assistant
 user_name = "Hussaan"
-fitness_goal= "Build muscle and improve endurance"
-schedule="Push workout at 16:00; Cardio at 17:30"
+fitness_goal = "Build muscle and improve endurance"
+schedule = "Push workout at 16:00; Cardio at 17:30"
 
 prompt = (
     f"You are a personal gym assistant. "
@@ -27,7 +26,6 @@ prompt = (
 
 first_message = f"Hey {user_name}, ready for your workout today?"
 
-# Override agent prompt and first message
 conversation_override = {
     "agent": {
         "prompt": {"prompt": prompt},
@@ -46,6 +44,7 @@ config = ConversationConfig(
 )
 
 client = ElevenLabs(api_key=API_KEY)
+stop_event = threading.Event()  # ← shared signal between threads
 
 def print_agent_response(response):
     print(f"Agent: {response}")
@@ -55,13 +54,10 @@ def print_interrupted_response(original, corrected):
 
 def print_user_transcript(transcript):
     print(f"User: {transcript}")
-
-    if "exit" in transcript.lower() or "quit" in transcript.lower():
+    if any(word in transcript.lower() for word in ["exit", "quit", "stop"]):
         print("Exiting assistant...")
-        conversation.end_session()   
-        sys.exit()
+        stop_event.set()  # signal the main thread to stop
 
-#Create conversation
 conversation = Conversation(
     client,
     AGENT_ID,
@@ -74,3 +70,6 @@ conversation = Conversation(
 )
 
 conversation.start_session()
+stop_event.wait()          # main thread blocks here until signal
+conversation.end_session()
+print("Session ended. Goodbye!")
