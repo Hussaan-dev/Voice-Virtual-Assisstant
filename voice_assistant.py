@@ -1,4 +1,5 @@
 import os
+import sys
 from dotenv import load_dotenv
 
 #to load API's
@@ -54,6 +55,11 @@ def print_interrupted_response(original, corrected):
 
 def print_user_transcript(transcript):
     print(f"User: {transcript}")
+
+    if "exit" in transcript.lower() or "quit" in transcript.lower():
+        print("Exiting assistant...")
+        conversation.end_session()   
+        sys.exit()
 
 #Create conversation
 conversation = Conversation(
